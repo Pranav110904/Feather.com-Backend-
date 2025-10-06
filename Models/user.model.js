@@ -44,8 +44,8 @@ const userSchema = new mongoose.Schema(
     },
     categories: [
       {
-        type: String,
-        trim: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
       },
     ],
     language: {
@@ -88,7 +88,7 @@ const userSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Active", "Inactive", "Suspended"],
-      default: "Active",
+      default: "Inactive",
     },
     role: {
       type: String,

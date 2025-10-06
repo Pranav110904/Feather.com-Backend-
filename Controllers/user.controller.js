@@ -1,18 +1,16 @@
 import User from "../Models/user.model.js";
 import sendEmail from "../Config/resend.js";
 // import verifyEmailTemplate from "../utils/verifyEmailTemplate.js";
-import bcryptjs from "bcryptjs";
- import generateAccessToken from "../Utils/generateAccessToken.js";
- import generateRefreshToken from "../Utils/generateRefreshToken.js";
+import bcrypt from "bcryptjs";
+import generateAccessToken from "../Utils/generateAccessToken.js";
+import generateRefreshToken from "../Utils/generateRefreshToken.js";
 // import { response } from "express";
-// import upload from "../Middleware/multer.js";
-// import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
-
+import uploadImageCloudinary from "../Utils/uploadImageToCloudinary.js";
 import generatedOtp from "../Utils/generateOtp.js";
 import otpTemplate from "../Utils/otpTemplate.js";
-import jwt from "jsonwebtoken";
+import Category from '../Models/category.modal.js';
 
-// so this is the user controller basicaaly i have extracted from the my previous project
+// so this is the user controller basicaly i have extracted from the my previous project
 // so  lets start creating this
 
 //Users Arrival Over the Pagee
@@ -139,8 +137,7 @@ export const verifyOtpByEmailController = async (req, res) => {
 };
 
 
-//Now create the password
- 
+//Now create the password and add the refresh token and access token
 export const createPasswordController = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -152,25 +149,27 @@ export const createPasswordController = async (req, res) => {
       });
     }
 
-    // 2️⃣ Find user
-    const user = await UserModel.findOne({ email });
+
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
         message: "User not found",
         success: false,
       });
     }
+    
+  
 
-    // 3️⃣ Hash password
+ 
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
+    user.status = "Active"; // update status to Active
     await user.save();
 
-    // 4️⃣ Generate tokens
     const accessToken = await generateAccessToken(user._id);
     const refreshToken = await generateRefreshToken(user._id);
 
-    // 5️⃣ Set cookies (secure, HTTP-only)
+  
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // only HTTPS in prod
@@ -185,7 +184,7 @@ export const createPasswordController = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // 6️⃣ Success response
+    
     return res.status(200).json({
       message: "Password created successfully and tokens generated.",
       success: true,
@@ -204,113 +203,268 @@ export const createPasswordController = async (req, res) => {
   }
 };
 
+//Uploading the image over cloudinary and then uplading that over the database
+export const updateProfilePictureController = async (req, res) => {
+  try {
+    // Multer adds file to req.file
+    const image = req.file;
+    const userId = req.userId; // from auth middleware
 
-//user registration
-// export async function userRegistrationControler(req,res){
+    if (!image) {
+      return res.status(400).json({
+        message: "Please upload an image",
+        error: true,
+        success: false,
+      });
+    }
 
-//         try{
+    // Upload to Cloudinary
+    const uploadResult = await uploadImageCloudinary(image);
 
-//             const {name ,email,dob}= req.body;
+    if (!uploadResult || !uploadResult.secure_url) {
+      return res.status(500).json({
+        message: "Failed to upload image",
+        error: true,
+        success: false,
+      });
+    }
 
-//             if(!name || !email || !dob){
-//                 return res.status(400).json(
-//                     {
-//                         message: "All fields are required",
-//                         error: true,
-//                         success: false
-//                     }
-//                 )
-//             }
+    // Update user in database
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { avatar: uploadResult.secure_url },
+      { new: true }
+    ).select("-password -refresh_token");
 
-//             const user = await UserModel.findOne({email});
-//             if(user){
-//                 return res.json(
-//                     {
-//                         message: " user Already Exsits",
-//                         error: true,
-//                         success: false
-//                     }
-//                 )
-//             }
+    res.status(200).json({
+      message: "Profile picture updated successfully",
+      data: updatedUser,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
+      error: true,
+      success: false,
+    });
+  }
+};
+//Language Selection Controller
+export async function languageSelectController(req,res)
+  {
+    try{
+      const {language} = req.body;
+      const userId = req.userId;
 
-//             const salt = await bcryptjs.genSalt(10);
-//             const hashedPassword = await bcryptjs.hash(password, salt);
+      if(!language){
+        return res.status(400).json({
+          message: "Language is required",
+          error: true,
+          success: false,
+        });
+      }
 
-//             const payload = {
-//                 name,
-//                 email,
-//                 password: hashedPassword
-//             }
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { language },
+        { new: true }
+      ).select("-password ");
 
-//             const newUser = new UserModel(payload)
-//             const save = await newUser.save();
+      res.status(200).json({
+        message: "Language updated successfully",
+        data: updatedUser,
+        success: true,
+        error: false,
+      });
+      
+    }catch(error){
+      console.error("Error updating language:", error);
+      res.status(500).json({
+        message: error.message || "Internal server error",
+        error: true,
+        success: false,
+      });
+    }
+  }
+  
+//creating the route for ADD USERNAME
+  
+export const addUsernameController = async (req, res) => {
+      try {
+          const { username } = req.body;
+  
+          if (!username) {
+              return res.status(400).json({
+                  message: "Username is required",
+                  error: true,
+                  success: false
+              });
+          }
+  
+          // Check if the username already exists
+          const existingUser = await User.findOne({ username });
+          if (existingUser) {
+              return res.status(409).json({
+                  message: "Username already taken",
+                  error: true,
+                  success: false
+              });
+          }
+  
+          // Update the username for the logged-in user
+          const updatedUser = await User.findByIdAndUpdate(
+              req.userId, // comes from auth middleware
+              { username },
+              { new: true } // returns the updated document
+          );
+  
+          if (!updatedUser) {
+              return res.status(404).json({
+                  message: "User not found",
+                  error: true,
+                  success: false
+              });
+          }
+  
+          res.status(200).json({
+              message: "Username updated successfully",
+              success: true,
+              error: false,
+              data: {
+                  id: updatedUser._id,
+                  username: updatedUser.username
+              }
+          });
+      } catch (error) {
+          res.status(500).json({
+              message: error.message || "Something went wrong",
+              error: true,
+              success: false
+          });
+      }
+  };
 
-//             const verifyEmailUrl=`${process.env.FRONTEND_URL}/verify-email?code=${save._id}`;
-//             const nameForEmail=payload.name;
+//Category Selection Controller
+export async function createCategorySelectionController(req, res) {
+    try {
+        const { names } = req.body; // expecting an array of category names
+        const userId = req.userId; // from auth middleware
 
-//             const verifyemail = await sendEmail({
-//                 reciver: email,
-//                 subject: "Verify Email",
-//                 html :  verifyEmailTemplate({
-//                    name : nameForEmail,
-//                    url :  verifyEmailUrl
-//             })
-//             })
+        if (!names || !Array.isArray(names) || names.length === 0) {
+            return res.status(400).json({
+                message: "Names array is required",
+                error: true,
+                success: false,
+            });
+        }
 
-//             return res.status(200).json({
-//                 message:  "User Registered Successfully",
-//                 error: false,
-//                 success: true,
-//                 data: save
-//             }
-//             )
+        // Remove duplicates in input
+        const uniqueNames = [...new Set(names)];
 
-//         }catch(error){
-//             return res.status(500).json(
-//                 {
-//                     message: error.message || error,
-//                     error: true,
-//                     success: false
-//                 }
-//             )
-//         }
-// }
+        // Find existing categories
+        const existingCategories = await Category.find({
+            name: { $in: uniqueNames }
+        });
 
-//verify email
-// export async function verifyEmail(req,res){
-//     try{
+        const existingNames = existingCategories.map(cat => cat.name);
 
-//         const {code_id}=req.body;
-//         console.log(code_id);
+        // Categories that need to be created
+        const newNames = uniqueNames.filter(name => !existingNames.includes(name));
 
-//         const user = await UserModel.findOne({_id : code_id});
-//         if(!user){
-//             return res.status(404).json({
-//                 message: "User Not Found",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+        // Insert new categories if any
+        const newCategories = newNames.length
+            ? await Category.insertMany(newNames.map(name => ({ name })))
+            : [];
 
-//         const updateUser = await UserModel.updateOne({_id:code_id},{verify_email : true})
+        // Combine all categories (existing + new)
+        const allCategories = [...existingCategories, ...newCategories];
 
-//         return res.status(200).json(
-//             {
-//                 message: "Email Verified Successfully",
-//                 error: false,
-//                 success: true,
-//                 data: updateUser
-//             }
-//         )
-//     }
-//     catch(error){
-//         return res.status(500).json({
-//             message: error.message || error,
-//             error: true,
-//             success: false
-//         })
-//     }
-// }
+        // Get ObjectIds
+        const categoryIds = allCategories.map(cat => cat._id);
+
+        // Update the authenticated user
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $addToSet: { categories: { $each: categoryIds } } }, // add only if not already present
+            { new: true }
+        ).populate('categories');
+
+        res.status(200).json({
+            message: "Categories added to user successfully",
+            data: updatedUser,
+            success: true,
+            error: false,
+        });
+
+    } catch (error) {
+        console.error("Error updating categories:", error);
+        res.status(500).json({
+            message: error.message || "Internal server error",
+            error: true,
+            success: false,
+        });
+    }
+}
+
+
+//Login Controller
+
+export async function LoginController(req,res){
+  try { 
+    const {email,password}= req.body;
+    if(!email || !password)
+    {
+        res.status(400).json({
+            message : "All fields are required",
+            error : true,
+            success : false
+        })
+    }
+    else{
+        const user = await UserModel.findOne({email});
+        if(!user) {
+            return res.status(404).json({
+                message: "User Not Found",
+                error: true,
+                success: false
+            });
+        }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if(!isPasswordValid){
+            return res.status(401).json({
+                message : "Invalid Credentials",
+                error : true,
+                success : false
+            })
+        }
+        const token = jwt.sign({id:user._id},process.env.SECRET_KEY_ACCESS_TOKEN,{expiresIn:process.env.JWT_EXPIRES_IN});
+        res.status(200).json({
+            message : "Login Successful",
+            data : {
+                user : {
+                    id : user._id,
+                    email : user.email,
+                    name : user.name,
+                    role : user.role,
+                    token : token
+                }
+            },
+            error : false,
+            success : true
+        })
+    }
+  }
+  catch (error) {
+    console.error("Error logging in:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
+      error: true,
+      success: false,
+    });
+  }
+}
 
 // //user login
 // export async function LoginController(req,res){

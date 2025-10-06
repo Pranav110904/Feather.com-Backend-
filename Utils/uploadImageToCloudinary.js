@@ -9,9 +9,10 @@ cloudinary.config({
 const uploadImageCloudinary = async (image) => {
 
     const buffer = image?.buffer || Buffer.from(await image.arrayBuffer());
+    
 
     const uploadImage = await new Promise ((resolve, reject) => {
-        cloudinary.uploader.upload_stream({folder : 'Blinkit'}, (error, uploadResult) => {
+        cloudinary.uploader.upload_stream({folder : 'Feather'}, (error, uploadResult) => {
             return resolve(uploadResult)       
         }).end(buffer)
     })

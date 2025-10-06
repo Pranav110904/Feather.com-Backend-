@@ -3,18 +3,30 @@
 // import {verifyEmail} from "../controllers/user.controller.js"
 // import { LoginController } from "../controllers/user.controller.js"
 // import { logoutController } from "../controllers/user.controller.js"
-// import  auth  from "../Middleware/auth.js"
-// import upload from "../Middleware/multer.js"
+import  auth  from "../Middleware/auth.js"
+import upload from "../Middleware/Multer.js"
 // import { uploadAvatar } from "../controllers/user.controller.js"
 
 import { 
   registerUserController,
-  verifyOtpByEmailController } from "../Controllers/user.controller.js"
+  verifyOtpByEmailController,
+  createPasswordController,
+  updateProfilePictureController,
+  languageSelectController,
+  addUsernameController,
+  createCategorySelectionController
+} from "../Controllers/user.controller.js"
 const userRouter=Router()
 
 
 userRouter.post('/register',registerUserController)
-userRouter.post('/verify',verifyOtpByEmailController)
+userRouter.post('/verify-Email',verifyOtpByEmailController)
+userRouter.post('/create-password',createPasswordController)
+userRouter.put('/profile-pic',auth,upload.single('profile-pic'),updateProfilePictureController)
+userRouter.post('/language-selection',auth,languageSelectController)
+userRouter.post('/add-username', auth, addUsernameController);
+userRouter.post('/add-categories', auth, createCategorySelectionController);
+
 // userRouter.post('/register',userRegistrationControler)
 // userRouter.post('/verify-email',verifyEmail)
 // userRouter.post('/login',LoginController)

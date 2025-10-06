@@ -14,24 +14,27 @@ import {
   updateProfilePictureController,
   languageSelectController,
   addUsernameController,
-  createCategorySelectionController
+  createCategorySelectionController,
+  loginController,
+  logoutController
 } from "../Controllers/user.controller.js"
 const userRouter=Router()
 
 
 userRouter.post('/register',registerUserController)
 userRouter.post('/verify-Email',verifyOtpByEmailController)
+userRouter.post('/login',loginController)
 userRouter.post('/create-password',createPasswordController)
 userRouter.put('/profile-pic',auth,upload.single('profile-pic'),updateProfilePictureController)
 userRouter.post('/language-selection',auth,languageSelectController)
 userRouter.post('/add-username', auth, addUsernameController);
 userRouter.post('/add-categories', auth, createCategorySelectionController);
+userRouter.get('/logout',auth,logoutController)
 
-// userRouter.post('/register',userRegistrationControler)
-// userRouter.post('/verify-email',verifyEmail)
-// userRouter.post('/login',LoginController)
-// userRouter.get('/logout',auth,logoutController)
-// userRouter.put('/upload-avatar',auth,upload.single('avatar'),uploadAvatar) 
+
+
+
+
 
 // userRouter.put('/update-user',auth,updateUserDetails)
 // userRouter.put('/forgot-password',forgotPasswordController)

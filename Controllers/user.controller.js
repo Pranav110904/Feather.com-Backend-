@@ -69,7 +69,6 @@ export const registerUserController = async (req, res) => {
   }
 };
 
-
 // Now the email Should be verified
 // Verification of email
 
@@ -135,7 +134,6 @@ export const verifyOtpByEmailController = async (req, res) => {
     return res.status(500).json({ message: "Server error", success: false });
   }
 };
-
 
 //Now create the password and add the refresh token and access token
 export const createPasswordController = async (req, res) => {
@@ -409,56 +407,80 @@ export async function createCategorySelectionController(req, res) {
 }
 
 
-//Login Controller
+//Login Controller 
+export async function loginController(req, res) {
+  try {
+    const { email, password } = req.body;
 
-export async function LoginController(req,res){
-  try { 
-    const {email,password}= req.body;
-    if(!email || !password)
-    {
-        res.status(400).json({
-            message : "All fields are required",
-            error : true,
-            success : false
-        })
+    // 🔹 Check required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+        error: true,
+        success: false,
+      });
     }
-    else{
-        const user = await UserModel.findOne({email});
-        if(!user) {
-            return res.status(404).json({
-                message: "User Not Found",
-                error: true,
-                success: false
-            });
-        }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if(!isPasswordValid){
-            return res.status(401).json({
-                message : "Invalid Credentials",
-                error : true,
-                success : false
-            })
-        }
-        const token = jwt.sign({id:user._id},process.env.SECRET_KEY_ACCESS_TOKEN,{expiresIn:process.env.JWT_EXPIRES_IN});
-        res.status(200).json({
-            message : "Login Successful",
-            data : {
-                user : {
-                    id : user._id,
-                    email : user.email,
-                    name : user.name,
-                    role : user.role,
-                    token : token
-                }
-            },
-            error : false,
-            success : true
-        })
+
+    // 🔹 Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        error: true,
+        success: false,
+      });
     }
-  }
-  catch (error) {
+
+    // 🔹 Check if account is active
+    if (user.status !== "Active") {
+      return res.status(400).json({
+        message: "Your account is not active",
+        error: true,
+        success: false,
+      });
+    }
+
+    // 🔹 Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "Invalid credentials",
+        error: true,
+        success: false,
+      });
+    }
+
+    // 🔹 Generate tokens
+    const accessToken = await generateAccessToken(user._id);
+    const refreshToken = await generateRefreshToken(user._id);
+
+    // 🔹 Set cookies
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // true only in prod
+      sameSite: "None",
+    };
+
+    res.cookie("accessToken", accessToken, cookieOptions);
+    res.cookie("refreshToken", refreshToken, cookieOptions);
+
+    // 🔹 Send response
+    return res.status(200).json({
+      message: "Login successful",
+      error: false,
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        accessToken,
+        refreshToken,
+      },
+    });
+  } catch (error) {
     console.error("Error logging in:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message || "Internal server error",
       error: true,
       success: false,
@@ -466,139 +488,51 @@ export async function LoginController(req,res){
   }
 }
 
-// //user login
-// export async function LoginController(req,res){
-//     try{
 
-//         const {email,password}= req.body;
-//         if(!email || !password)
-//         {
-//             res.status(400).json({
-//                 message : "All fields are required",
-//                 error : true,
-//                 success : false
-//             })
-//         }
+//user logout Controller
 
-//         const user = await UserModel.findOne({email});
+export async function logoutController(req, res) {
+  try {
+    const userId = req.userId;
 
-//         if(!user) {
-//             return res.status(404).json({
-//                 message: "User Not Found",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized user",
+        error: true,
+        success: false,
+      });
+    }
 
-//         if(user.status!=="Active"){
-//             res.status(400).json({
-//                 message: "Your account is not active",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+    // 🔹 Clear cookies
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    };
 
-//         const isMatch = await bcryptjs.compare(password,user.password);
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
 
-//         if(!isMatch){
-//             return res.status(400).json({
-//                 message: "Invalid Credentials",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+    // 🔹 Remove stored refresh token in DB
+    await User.findByIdAndUpdate(userId, { refresh_token: "" });
 
-//         const accessToken= await generateAccessToken(user._id);
-//         const refreshToken = await generateRefreshToken(user._id);
+    return res.status(200).json({
+      message: "Logout successful",
+      error: false,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error during logout:", error);
+    return res.status(500).json({
+      message: error.message || "Internal server error",
+      error: true,
+      success: false,
+    });
+  }
+}
 
-//         const cookieOptions = {
-//             httpOnly: true,
-//             secure: true,
-//             sameSite: 'None',
-//         }
 
-//         res.cookie('refreshToken',refreshToken,cookieOptions)
-//         res.cookie('accessToken',accessToken,cookieOptions)
 
-//         return res.status(200).json({
-//             message: "Login Successfull",
-//             error: false,
-//             success: true,
-//             data: {
-//                 accessToken,
-//                 refreshToken
-//             }
-//         })
-
-//     }
-//     catch(error){
-//         res.status(500).json({
-//             message: error.message || error,
-//             error: true,
-//             success: false
-//         })
-//     }
-// }
-
-// //user logout
-// export async function logoutController(req,res){
-//     try{
-
-//         const userId = req.userId;
-//         const cookieOptions = {
-//             httpOnly: true,
-//             secure: true,
-//             sameSite: 'None',
-//         }
-//         res.clearCookie('refreshToken',cookieOptions);
-//         res.clearCookie('accessToken',cookieOptions);
-
-//         const updateRefreshToken = await UserModel.findByIdAndUpdate({_id: userId}, {refresh_token : ""})
-
-//         return res.status(200).json({
-//             message: "Logout Successfull",
-//             error: false,
-//             success: true,
-//         })
-
-//     }
-//     catch(error){
-//         res.status(500).json({
-
-//             message: error.message || error,
-//             error: true,
-//             success: false,
-
-//         })
-//     }
-// }
-
-// //user Avatar
-// export  async function uploadAvatar(req,res){
-
-//     try {
-//         const userId = req.userId;
-//         const image = req.file;
-
-//         const upload = await uploadImageCloudinary(image);
-
-//         const updateAvatar = await UserModel.findByIdAndUpdate({_id: userId}, {avatar : upload.secure_url})
-
-//         return res.status(200).json({
-//             message: "Avatar Uploaded Successfully",
-//             error: false,
-//             success: true,
-//             data: upload
-//         })
-//     }
-//     catch(error){
-//         return res.status(500).json({
-//             message: error.message || error,
-//             error: true,
-//             success: false,
-//         })
-//     }
-// }
 
 // //user detail updation
 // export async function updateUserDetails(req,res) {

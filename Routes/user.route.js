@@ -16,7 +16,10 @@ import {
   addUsernameController,
   createCategorySelectionController,
   loginController,
-  logoutController
+  logoutController,
+  forgotPasswordController,
+  verifyOtpController,resetPasswordController,
+  updateUserController
 } from "../Controllers/user.controller.js"
 const userRouter=Router()
 
@@ -30,6 +33,10 @@ userRouter.post('/language-selection',auth,languageSelectController)
 userRouter.post('/add-username', auth, addUsernameController);
 userRouter.post('/add-categories', auth, createCategorySelectionController);
 userRouter.get('/logout',auth,logoutController)
+userRouter.put('/forgot-password',forgotPasswordController)
+userRouter.post('/otp-verify',verifyOtpController)
+userRouter.post('/reset-password',resetPasswordController)
+userRouter.post('/update-user',auth,upload.single('profile-pic'),updateUserController)
 
 
 

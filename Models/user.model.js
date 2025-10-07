@@ -70,7 +70,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    password_expiry: {
+    password_otp_expiry: {
       type: Date,
       default: null,
     },
@@ -81,6 +81,10 @@ const userSchema = new mongoose.Schema(
     forgot_password_expiry: {
       type: Date,
       default: null,
+    },
+    isOtpVerified :{
+      type: Boolean,
+      default: false,
     },
 
 

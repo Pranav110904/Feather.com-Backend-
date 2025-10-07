@@ -9,6 +9,7 @@ import uploadImageCloudinary from "../Utils/uploadImageToCloudinary.js";
 import generatedOtp from "../Utils/generateOtp.js";
 import otpTemplate from "../Utils/otpTemplate.js";
 import Category from '../Models/category.modal.js';
+import passwordResetOtpTemplate from "../Utils/passwordResetOtpTemplate.js";
 
 // so this is the user controller basicaly i have extracted from the my previous project
 // so  lets start creating this
@@ -249,6 +250,7 @@ export const updateProfilePictureController = async (req, res) => {
     });
   }
 };
+
 //Language Selection Controller
 export async function languageSelectController(req,res)
   {
@@ -490,7 +492,6 @@ export async function loginController(req, res) {
 
 
 //user logout Controller
-
 export async function logoutController(req, res) {
   try {
     const userId = req.userId;
@@ -532,260 +533,226 @@ export async function logoutController(req, res) {
 }
 
 
+//forgot password
+export async function forgotPasswordController(req,res){
+  try{  
+    
+    const { email } = req.body;
+    
+        const user = await User.findOne({ email });
+        if (!user) {
+          return res.status(404).json({
+            message: "User not found",
+            error:true,
+            success: false,
+          });
+        }
+    
+        // Generate OTP
+        const otp = generatedOtp();
+    
+        user.forgot_password_otp = otp;
+        user.forgot_password_expiry = Date.now() + 5 * 60 * 1000; // expires in 5 mins
+        await user.save();
+    
+        // Send OTP to email
+        await sendEmail({
+          reciver:email,
+          subject: "Password Reset OTP",
+          html: passwordResetOtpTemplate({name:user.username,otp:otp})
+        });
+    
+        return res.status(200).json({
+          message: "OTP sent successfully",
+          success: true,
+        });
+    
+    
+  }catch(error){
+    return res.status(500).json({
+      message: error.message || "Internal server error",
+      error: true,
+      success: false,
+    });
+  }
+}
 
 
-// //user detail updation
-// export async function updateUserDetails(req,res) {
+//verify the reset password otp 
+export const verifyOtpController = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
 
-//     try{
-//         const userId = req.userId;
-//         const {name,email,mobile,password} = req.body;
-//         let hashPassword = "";
-//         if(password)
-//         {
-//             const salt = await bcryptjs.genSalt(10);
-//              hashPassword = await bcryptjs.hash(password, salt);
-//         }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        error: true,
+        success: false,
+      });
+    }
 
-//         const updateUser= await UserModel.updateOne({_id:userId},{
-//             ...name && {name : name},
-//             ...email && {email : email},
-//             ...mobile && {mobile : mobile},
-//             ...password && {password : hashPassword}
-//         })
+    if (
+      user.forgot_password_otp !== otp ||
+      user.forgot_password_expiry < Date.now()
+    ) {
+      return res.status(400).json({
+        message: "Invalid or expired OTP",
+        error: true,
+        success: false,
+      });
+    }
 
-//         return res.status(200).json({
-//             message: "User Details Updated Successfully",
-//             error: false,
-//             success: true,
-//             data: updateUser
-//         })
+    // ✅ OTP verified successfully — clear OTP fields
+    user.forgot_password_otp = null;
+    user.forgot_password_expiry = null;
+    user.isOtpVerified = true;
+    await user.save();
 
-//     }
-//     catch(error){
-//         return res.status(500).json({
-//             message: error.message || error,
-//             error: true,
-//             success: false,
-//         })
-//     }
-// }
+    return res.status(200).json({
+      message: "OTP verified successfully",
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+      success: false,
+    });
+  }
+};
 
-// //forgot password
-// export async function forgotPasswordController(req, res) {
-//   try {
-//     const { email } = req.body;
 
-//     const user = await UserModel.findOne({ email });
-//     if (!user) {
-//       return res.status(404).json({
-//         message: "User Not Found",
-//         error: true,
-//         success: false
-//       });
-//     }
-//     const otp = generatedOtp();
+//reseting the Password
+export const resetPasswordController = async (req, res) => {
+  try {
+    const { email, password, confirmPassword } = req.body;
 
-//     const expireTime = new Date(Date.now() + 60 * 60 * 1000); //
-//     const updateUser = await UserModel.findByIdAndUpdate(
-//       { _id: user._id },
-//       {
-//         forgot_password_otp: otp,
-//         forgot_password_expiry: expireTime.toISOString()
-//       },
-//       { new: true }
-//     );
+    // 1️⃣ Validate input
+    if (!email || !password || !confirmPassword) {
+      return res.status(400).json({
+        message: "Email, password, and confirm password are required",
+        success: false,
+      });
+    }
 
-//     await sendEmail({
-//       reciver: email,
-//       subject: "Blinkit - OTP for Password Reset",
-//       html: otpTemplate({ name: user.name, otp })
-//     });
+    // 2️⃣ Validate password match
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        message: "Passwords do not match",
+        success: false,
+      });
+    }
 
-//     return res.json({
-//       message: "OTP Sent Successfully",
-//       error: false,
-//       success: true,
-//       data: {
-//         email: user.email,
-//         name: user.name
-//       }
-//     });
+    // 3️⃣ Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
 
-//   } catch (error) {
-//     return res.status(500).json({
-//       message: error.message || "Internal Server Error",
-//       error: true,
-//       success: false
-//     });
-//   }
-// }
+    // 4️⃣ Check if OTP was verified first
+    if (!user.isOtpVerified) {
+      return res.status(400).json({
+        message: "OTP not verified. Please verify before resetting password.",
+        success: false,
+      });
+    }
 
-// //verifyOTP
-// export async function verifyOtpController(req, res) {
-//     try{
-//         const {email, otp } = req.body;
+    // 5️⃣ Hash new password and clear verification flag
+    const hashed = await bcrypt.hash(password, 10);
+    user.password = hashed;
+    user.isOtpVerified = false; // reset verification flag
+    await user.save();
 
-//         if(!email || !otp){
-//             return res.status(400).json({
-//                 message: "Email and OTP are required",
-//                 error: true,
-//                 success: false
-//             })
-//         }
-//         const user = await UserModel.findOne({email});
-//         if(!user){
-//             return res.status(404).json({
-//                 message: "User Not Found",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+    return res.status(200).json({
+      message: "Password reset successful",
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+      success: false,
+    });
+  }
+};
 
-//         const currTime=new Date();
-//         if(user.forgot_password_expiry < currTime){
-//             return res.status(400).json({
-//                 message: "OTP Expired",
-//                 error: true,
-//                 success: false
-//             })
-//         }
 
-//         if(user.forgot_password_otp !== otp){
-//             return res.status(400).json({
-//                 message: "Invalid OTP",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+//update user controller
+export const updateUserController = async (req, res) => {
+  try {
+    const userId = req.userId; // from auth middleware
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
+    }
 
-//         return res.status(200).json({
-//             message: "OTP Verified Successfully",
-//             error: false,
-//             success: true,
-//             data: user
-//         })
-//     }
-//     catch(error)
-//     {
-//         return res.status(500).json({
-//             message: error.message || error,
-//             error: true,
-//             success: false
-//         })
-//     }
-// }
+    const { name, username, dob, bio, language, categories } = req.body;
 
-// //reset the password
-// export async function resetPasswordController(req,res) {
-//     try{
+    const updateFields = {
+      ...(name && { name }),
+      ...(username && { username }),
+      ...(dob && { dob }),
+      ...(bio && { bio }),
+      ...(language && { language }),
+    };
 
-//         const {email ,newpassword ,confirmpassword} =req.body;
+    // 🔹 Handle avatar upload if file is provided
+    if (req.file) {
+      const uploadResult = await uploadImageCloudinary(req.file);
+      if (!uploadResult || !uploadResult.secure_url) {
+        return res.status(500).json({
+          message: "Failed to upload avatar",
+          success: false,
+        });
+      }
+      updateFields.avatar = uploadResult.secure_url;
+    }
 
-//         if(!email || !newpassword || !confirmpassword){
-//             return res.status(400).json({
-//                 message: "Email and Password are required",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+    // 🔹 Handle categories: merge new categories if provided
+    if (categories && Array.isArray(categories)) {
+      const user = await User.findById(userId);
+      const mergedCategories = [...new Set([...(user.categories || []), ...categories])];
+      updateFields.categories = mergedCategories;
+    }
 
-//         const user = await UserModel.findOne({email});
-//         if(!user){
-//             return res.status(404).json({
-//                 message: "User Not Found",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({
+        message: "No valid fields provided for update",
+        success: false,
+      });
+    }
 
-//         if(newpassword !== confirmpassword){
-//             return res.status(400).json({
-//                 message: "Password and Confirm Password do not match",
-//                 error: true,
-//                 success: false
-//             })
-//         }
+    // 🔹 Update user in DB
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).select("-password -refresh_token -forgot_password_otp -forgot_password_expiry");
 
-//         const salt = await bcryptjs.genSalt(10);
-//         const hashPassword = await bcryptjs.hash(newpassword, salt);
+    if (!updatedUser) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
 
-//         const updateUser = await UserModel.findByIdAndUpdate(
-//             { _id: user._id },
-//             {
-//               password: hashPassword,
-//               forgot_password_otp: null,
-//               forgot_password_expiry: null
-//             },
-//             { new: true }
-//           );
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      success: true,
+      user: updatedUser,
+    });
 
-//         return res.status(200).json({
-//             message: "Password Reset Successfully",
-//             error: false,
-//             success: true,
-//             data: updateUser
-//         })
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return res.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+    });
+  }
+};
 
-//     }
-//     catch(error){
-//         return res.status(500).json({
-//             message: error.message || error,
-//             error: true,
-//             success: false
-//         })
-//     }
-// }
 
-// //refresh token controller
-// export async function refreshTokenController(req,res){
 
-//     try{
 
-//         const refreshToken = req.cookies.refreshToken || request.header?.authorization?.split(" ")[1];
 
-//         if(!refreshToken)
-//         {
-//             return res.status(401).json({
-//                 message: "Unauthorized",
-//                 error: true,
-//                 success: false
-//             })
-//         }
-
-//         const verifyToken = await jwt.verify(refreshToken,process.env.SECRET_KEY_REFRESH_TOKEN);
-
-//         if(!verifyToken)
-//         {
-//             return res.status(401).json({
-//                 message: "Unauthorized",
-//                 error: true,
-//                 success: false
-//             })
-//         }
-
-//         const newaccessToken= await generateAccessToken(verifyToken?._id)
-
-//         res.cookie("accessToken",newaccessToken,{
-//             httpOnly: true,
-//             secure: true,
-//             sameSite: 'None',
-//         })
-
-//         return res.status(200).json({
-//             message: "Token Refreshed Successfully",
-//             error: false,
-//             success: true,
-//             data: newaccessToken
-//         })
-//     }
-//     catch(error){
-
-//         return res.status(500).json({
-//             message: error.message || error,
-//             error: true,
-//             success: false
-//         })
-
-//     }
-// }

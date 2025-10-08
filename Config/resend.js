@@ -1,34 +1,39 @@
-import { Resend } from 'resend';
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
 
-const resend = new Resend(process.env.RESEND_KEY);
-
-
-if(process.env.RESEND_KEY){
-  console.log("provide Resend_API in the .env file")
-  
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  console.log("Provide SMTP credentials in the .env file");
 }
 
-
+// Same structure as before 👇
 const sendEmail = async ({ reciver, subject, html }) => {
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'Feather <onboarding@resend.dev>',
-      to: reciver,
+    // create transporter (mail sender)
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: false, // true for port 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    // send the email
+    const info = await transporter.sendMail({
+      from: process.env.FROM_EMAIL,
+      to: reciver, // 👈 keeping your same parameter
       subject: subject,
       html: html,
     });
 
-    if(error){
-      console.log("Resend API returned an error:", error);
-      return { success: false, message: error.message || "Error sending email" };
-    }
-
-    return { success: true, data };
+    console.log("Email sent successfully:", info.messageId);
+    return { success: true, data: info };
   } catch (err) {
     console.error("Error sending email:", err);
     return { success: false, message: err.message };
   }
 };
-
 
 export default sendEmail;

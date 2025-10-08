@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import connectDB from './Config/connectDB.js';
 import  userRouter  from './Routes/user.route.js';
 import feedRoutes from './Routes/feed.route.js';
+import followRouter from './Routes/follow.route.js';
 dotenv.config();
 
 const app = express();
@@ -50,6 +51,7 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api/users', userRouter); // Example user routes
 app.use("/api", feedRoutes);
+app.use("/api",followRouter)
 
 // === DATABASE & SERVER ===
 const PORT = process.env.PORT || 8080;

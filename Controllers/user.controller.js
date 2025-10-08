@@ -45,7 +45,7 @@ export const registerUserController = async (req, res) => {
       email,
       dob,
       create_password_otp,
-      password_expiry: otpExpiry,
+      password_otp_expiry: otpExpiry,
     });
 
     // Send OTP via email
@@ -82,7 +82,7 @@ export const verifyOtpByEmailController = async (req, res) => {
         success: false 
       });
 
-    const user = await User.findOne({ email }).select("create_password_otp password_expiry verify_email");
+    const user = await User.findOne({ email }).select("create_password_otp password_otp_expiry verify_email");
     if (!user) 
       return res.status(404).json({ 
         message: "User not found", 
@@ -97,14 +97,14 @@ export const verifyOtpByEmailController = async (req, res) => {
         error: true
       });
 
-    if (!user.create_password_otp || !user.password_expiry)
+    if (!user.create_password_otp || !user.password_otp_expiry)
       return res.status(400).json({
         message: "No OTP found, request a new one", 
         success: false,
         error: true
       });
 
-    if (new Date() > new Date(user.password_expiry))  
+    if (new Date() > new Date(user.password_otp_expiry))  
       return res.status(400).json({ 
         message: "OTP expired", 
         success: false,
@@ -120,7 +120,7 @@ export const verifyOtpByEmailController = async (req, res) => {
 
     user.verify_email = true;
     user.create_password_otp = null;
-    user.password_expiry = null;
+    user.password_otp_expiry = null;
     await user.save();
 
     return res.status(200).json({ 

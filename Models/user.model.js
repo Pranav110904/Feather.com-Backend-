@@ -1,46 +1,63 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
     // 🔹 Basic Details
-    name: {
+    name: 
+    { 
       type: String,
       required: [true, "Please provide your full name"],
-      trim: true,
+      trim: true 
     },
-    email: {
-      type: String,
-      required: [true, "Please provide an email"],
-      unique: true,
-      lowercase: true,
-      trim: true,
+    email: 
+    { 
+      type: String, 
+      required: [true, "Please provide an email"], 
+      unique: true, 
+      lowercase: true, 
+      trim: true 
     },
-    password: {
-      type: String,
-      required: [false, "Please provide a password"],
-      minlength: [6, "Password must be at least 6 characters long"],
+    password: 
+    { 
+      type: String, 
+      minlength: [6, "Password must be at least 6 characters long"] 
     },
-    dob: {
-      type: Date,
-      required: [true, "Please provide your date of birth"],
+    dob: 
+    {
+      type: Date, 
+      required: [true, "Please provide your date of birth"] 
     },
 
     // 🔹 Profile & Personalization
-    username: {
-      type: String,
-      unique: true,
-      sparse: true,
-      trim: true,
+    username: 
+    { 
+      type: String, 
+      unique: true, 
+      sparse: true, 
+      trim: true 
     },
-    avatar: { type: String, default: "" },
-    bio: { type: String, maxlength: 160, default: "" },
-    categories: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Category",
-      },
+    avatar: 
+    { 
+      type: String, 
+      default: "" 
+    },
+    bio: 
+    { 
+      type: String,
+      maxlength: 160, 
+      default: "" 
+    },
+    categories: 
+    [
+      { type: mongoose.Schema.Types.ObjectId, 
+        ref: "Category" 
+      }
     ],
-    language: { type: String, default: "English" },
+    language: 
+    { 
+      type: String, 
+      default: "English" 
+    },
 
     // 🔹 Authentication & Verification
     refresh_token: 
@@ -50,18 +67,18 @@ const userSchema = new mongoose.Schema(
     },
     verify_email: 
     { 
-      type: Boolean,
-      default: false 
+      type: Boolean, 
+      default: false
     },
     last_login_date: 
     { 
-      type: Date,
+      type: Date, 
       default: Date.now 
     },
     create_password_otp: 
     { 
       type: String, 
-      default: null 
+      default: null
     },
     password_otp_expiry: 
     { 
@@ -78,45 +95,48 @@ const userSchema = new mongoose.Schema(
       type: Date, 
       default: null 
     },
-    isOtpVerified: { type: Boolean, default: false },
+    isOtpVerified: 
+    { 
+      type: Boolean, 
+      default: false 
+    },
 
     // 🔹 Account Status & Roles
-    status: {
-      type: String,
-      enum: ["Active", "Inactive", "Suspended"],
-      default: "Inactive",
+    status: 
+    { 
+      type: String, 
+      enum: ["Active", "Inactive", "Suspended"], 
+      default: "Inactive" 
     },
-    role: {
-      type: String,
-      enum: ["User", "Admin"],
-      default: "User",
+    role: 
+    { 
+      type: String, 
+      enum: ["User", "Admin"], 
+      default: "User" 
     },
 
-    // 🔹 Follow System
-    following: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    ],
-    followers: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    ],
+    // 🔹 Follower/Following counts
+    followersCount: 
+    { 
+      type: Number, 
+      default: 0 
+    },
+    followingCount: 
+    { 
+      type: Number, 
+      default: 0 
+    },
 
     // 🔹 Optional for Redis caching
-    redisFeedKey: {
+    redisFeedKey: 
+    { 
       type: String,
-      default: null, // e.g. feed:{userId}
+      default: null 
     },
 
     // 🔹 Miscellaneous
-    stories: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Story",
-      },
-    ],
-    themes: {
-      backgroundColor: { type: String, default: "#ffffff" },
-      accentColor: { type: String, default: "#1DA1F2" },
-    },
+    stories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Story" }],
+    themes: { backgroundColor: { type: String, default: "#ffffff" }, accentColor: { type: String, default: "#1DA1F2" } },
   },
   { timestamps: true }
 );

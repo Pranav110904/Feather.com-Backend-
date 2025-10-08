@@ -2,89 +2,45 @@ import mongoose from "mongoose";
 
 const tweetSchema = new mongoose.Schema(
   {
-    // 🔹 Who posted the tweet
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-
-    // 🔹 The main text of the tweet
     content: {
       type: String,
-      maxlength: 280,
-      trim: true,
-      required: [true, "Tweet cannot be empty"],
+      required: [true, "Tweet content cannot be empty"],
+      maxlength: [280, "Tweet cannot exceed 280 characters"],
     },
-
-    // 🔹 Optional media (image, video, voice tweet)
-    media: {
-      type: {
-        url: String,
-        type: {
-          type: String,
-          enum: ["image", "video", "audio", "none"],
-          default: "none",
-        },
-      },
-      default: null,
-    },
-
-    // 🔹 Categories / hashtags (used for feed sorting)
-    categories: [
+    media: [
       {
-        type: String,
-        trim: true,
+        url: String,
+        type: { type: String, enum: ["image", "video", "gif"] },
       },
     ],
-
-    // 🔹 Reactions (like LinkedIn style)
+    // 🆕 Reactions system
     reactions: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         type: {
           type: String,
-          enum: ["like", "love", "insightful", "funny", "support", "celebrate"],
+          enum: ["like", "love", "funny", "insightful", "support", "celebrate", "curious"],
+          required: true,
         },
       },
     ],
-
-    // 🔹 Comments
-    comments: [
+    replies: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        text: String,
-        createdAt: { type: Date, default: Date.now },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tweet", // allows threaded replies
       },
     ],
-
-    // 🔹 Retweets / Reposts
-    retweetedBy: [
+    retweets: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
     ],
-
-    // 🔹 For AI-generated tweets
-    generatedByAI: {
-      type: Boolean,
-      default: false,
-    },
-
-    // 🔹 Mood status (optional, if user attaches their mood)
-    mood: {
-      type: String,
-      enum: ["happy", "sad", "excited", "tired", "neutral"],
-      default: "neutral",
-    },
-
-    // 🔹 Visibility and timestamps
-    visibility: {
-      type: String,
-      enum: ["public", "followers", "private"],
-      default: "public",
-    },
   },
   { timestamps: true }
 );

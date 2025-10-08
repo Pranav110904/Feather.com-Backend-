@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 
-
 const userSchema = new mongoose.Schema(
   {
     // 🔹 Basic Details
@@ -30,63 +29,56 @@ const userSchema = new mongoose.Schema(
     username: {
       type: String,
       unique: true,
-      sparse: true, // allows null until user sets username
+      sparse: true,
       trim: true,
     },
-    avatar: {
-      type: String,
-      default: "",
-    },
-    bio: {
-      type: String,
-      maxlength: 160,
-      default: "",
-    },
+    avatar: { type: String, default: "" },
+    bio: { type: String, maxlength: 160, default: "" },
     categories: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Category",
       },
     ],
-    language: {
-      type: String,
-      default: "English",
-    },
+    language: { type: String, default: "English" },
 
     // 🔹 Authentication & Verification
-    refresh_token: {
+    refresh_token: 
+    { 
       type: String,
-      default: "",
+      default: "" 
     },
-    verify_email: {
+    verify_email: 
+    { 
       type: Boolean,
-      default: false,
+      default: false 
     },
-    last_login_date: {
+    last_login_date: 
+    { 
       type: Date,
-      default: Date.now,
+      default: Date.now 
     },
-    create_password_otp: {
-      type: String,
-      default: null,
+    create_password_otp: 
+    { 
+      type: String, 
+      default: null 
     },
-    password_otp_expiry: {
-      type: Date,
-      default: null,
+    password_otp_expiry: 
+    { 
+      type: Date, 
+      default: null 
     },
-    forgot_password_otp: {
-      type: String,
-      default: null,
+    forgot_password_otp: 
+    { 
+      type: String, 
+      default: null 
     },
-    forgot_password_expiry: {
-      type: Date,
-      default: null,
+    forgot_password_expiry: 
+    { 
+      type: Date, 
+      default: null 
     },
-    isOtpVerified :{
-      type: Boolean,
-      default: false,
-    },
-
+    isOtpVerified: { type: Boolean, default: false },
 
     // 🔹 Account Status & Roles
     status: {
@@ -100,15 +92,21 @@ const userSchema = new mongoose.Schema(
       default: "User",
     },
 
-    // 🔹 Relations (for scalability)
-    follows: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
+    // 🔹 Follow System
+    following: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    ],
+    followers: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     ],
 
-    // future expansion examples
+    // 🔹 Optional for Redis caching
+    redisFeedKey: {
+      type: String,
+      default: null, // e.g. feed:{userId}
+    },
+
+    // 🔹 Miscellaneous
     stories: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -122,7 +120,6 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 export default User;

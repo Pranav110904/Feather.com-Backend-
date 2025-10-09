@@ -17,8 +17,8 @@ export const createTweet = async (req, res) => {
 
     // 2️⃣ Get all followers of the author
     const followers = await Follow.find({ following: authorId }).select("follower");
-    console.log(followers)
     // followers = [{ follower: ObjectId1 }, { follower: ObjectId2 }, ...]
+    
 
     // 3️⃣ Use Redis pipeline to push tweet to all feeds
     const pipeline = redis.multi();

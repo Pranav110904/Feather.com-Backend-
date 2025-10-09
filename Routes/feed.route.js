@@ -7,8 +7,6 @@ const feedRouter = Router();
 
 
 feedRouter.post("/tweet", auth, createTweet);
-
-
-feedRouter.get("/feed/:userId", auth, getFeed);
+feedRouter.get("/feed", auth, getFeed);
 
 export default feedRouter;

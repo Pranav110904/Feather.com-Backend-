@@ -3,7 +3,9 @@ import Tweet from "../Models/tweet.model.js";
 import AIPrompt from "../Models/aiPrompt.model.js";
 import { generateTweetContent } from "../Services/geminiService.js";
 import { createTweetPrompt } from "../Utils/generatePromptTemplate.js";
+import Follow from "../Models/follow.model.js";
 import mongoose from "mongoose";
+import redis from "../Config/redis.js"; 
 
 // 🔹 Generate a tweet using AI
 export const generateTweet = async (req, res) => {
@@ -37,7 +39,7 @@ export const generateTweet = async (req, res) => {
 export const postTweet = async (req, res) => {
   try {
     const userId = req.userId; // Authenticated user
-    const { content, promptId } = req.body;
+    const { content, promptId, media } = req.body;
 
     // Check for empty content
     if (!content || content.trim() === "") {
@@ -45,29 +47,50 @@ export const postTweet = async (req, res) => {
     }
 
     // Enforce Twitter character limit
-    if (content.length > 350) {
-      return res.status(400).json({ message: "Tweet cannot exceed 350 characters" });
+    if (content.length > 280) {
+      return res.status(400).json({ message: "Tweet cannot exceed 280 characters" });
     }
 
-    // Create tweet
+    // 1️⃣ Create tweet in MongoDB
     const tweet = await Tweet.create({
       author: userId,
       content,
+      media: media || [],
       generatedByAI: !!promptId,
       originalPromptId: promptId || null,
     });
 
-    // Update the AI prompt if used
+    // 2️⃣ Update AI prompt if used
     if (promptId && mongoose.Types.ObjectId.isValid(promptId)) {
       await AIPrompt.findByIdAndUpdate(promptId, { usedInTweet: tweet._id });
     }
 
-    res.status(200).json({ message: "Tweet posted successfully", tweet });
+    // 3️⃣ Get followers of the author
+    const followers = await Follow.find({ following: userId }).select("follower");
+
+    // 4️⃣ Use Redis pipeline to push tweet to feeds
+    const pipeline = redis.multi();
+    const feedKey = (uid) => `feed:${uid}`;
+
+    // Push to author's own feed
+    pipeline.lPush(feedKey(userId), tweet._id.toString());
+    pipeline.lTrim(feedKey(userId), 0, 19); // Keep only last 20 tweets
+
+    // Push to all followers
+    followers.forEach(({ follower }) => {
+      pipeline.lPush(feedKey(follower.toString()), tweet._id.toString());
+      pipeline.lTrim(feedKey(follower.toString()), 0, 19);
+    });
+
+    await pipeline.exec();
+
+    res.status(201).json({ message: "Tweet posted successfully", tweet });
   } catch (error) {
-    console.error(error);
+    console.error("Tweet post error:", error);
     res.status(500).json({ message: "Failed to post tweet" });
   }
 };
+
 // 🔹 Optional: Get AI prompt history for a user
 export const getAIPrompts = async (req, res) => {
   try {

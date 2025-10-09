@@ -8,7 +8,7 @@ import generateRefreshToken from "../Utils/generateRefreshToken.js";
 import uploadImageCloudinary from "../Utils/uploadImageToCloudinary.js";
 import generatedOtp from "../Utils/generateOtp.js";
 import otpTemplate from "../Utils/otpTemplate.js";
-import Category from '../Models/category.modal.js';
+import Category from '../Models/category.model.js';
 import passwordResetOtpTemplate from "../Utils/passwordResetOtpTemplate.js";
 
 // so this is the user controller basicaly i have extracted from the my previous project

@@ -1,5 +1,5 @@
-import Tweet from "../Models/tweet.modal.js";
-import Follow from "../Models/follow.modal.js";
+import Tweet from "../Models/tweet.model.js";
+import Follow from "../Models/follow.model.js";
 import redis from "../Config/redis.js";
 
 export const getFeed = async (req, res) => {

@@ -8,6 +8,7 @@ import connectDB from './Config/connectDB.js';
 import  userRouter  from './Routes/user.route.js';
 import feedRoutes from './Routes/feed.route.js';
 import followRouter from './Routes/follow.route.js';
+import aiTweetRouter from './Routes/aiTweets.route.js';
 dotenv.config();
 
 const app = express();
@@ -52,6 +53,7 @@ app.get('/', (req, res) => {
 app.use('/api/users', userRouter); // Example user routes
 app.use("/api", feedRoutes);
 app.use("/api",followRouter)
+app.use("/api/ai",aiTweetRouter)
 
 // === DATABASE & SERVER ===
 const PORT = process.env.PORT || 8080;

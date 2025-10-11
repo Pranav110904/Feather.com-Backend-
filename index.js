@@ -5,10 +5,11 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './Config/connectDB.js';
-import  userRouter  from './Routes/user.route.js';
+import userRouter  from './Routes/user.route.js';
 import feedRoutes from './Routes/feed.route.js';
 import followRouter from './Routes/follow.route.js';
 import aiTweetRouter from './Routes/aiTweets.route.js';
+import storyRouter from './Routes/story.route.js';
 dotenv.config();
 
 const app = express();
@@ -54,6 +55,9 @@ app.use('/api/users', userRouter); // Example user routes
 app.use("/api", feedRoutes);
 app.use("/api",followRouter)
 app.use("/api/ai",aiTweetRouter)
+app.use("/api/story",storyRouter)
+
+
 
 // === DATABASE & SERVER ===
 const PORT = process.env.PORT || 8080;

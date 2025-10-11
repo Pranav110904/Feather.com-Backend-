@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    // 🔹 Basic Details
+    //   Basic Details
     name: 
     { 
       type: String,
@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
       required: [true, "Please provide your date of birth"] 
     },
 
-    // 🔹 Profile & Personalization
+    // - Profile & Personalization
     username: 
     { 
       type: String, 
@@ -59,7 +59,7 @@ const userSchema = new mongoose.Schema(
       default: "English" 
     },
 
-    // 🔹 Authentication & Verification
+    // - Authentication & Verification
     refresh_token: 
     { 
       type: String,
@@ -101,7 +101,7 @@ const userSchema = new mongoose.Schema(
       default: false 
     },
 
-    // 🔹 Account Status & Roles
+    // - Account Status & Roles
     status: 
     { 
       type: String, 
@@ -115,7 +115,7 @@ const userSchema = new mongoose.Schema(
       default: "User" 
     },
 
-    // 🔹 Follower/Following counts
+    // - Follower/Following counts
     followersCount: 
     { 
       type: Number, 
@@ -127,14 +127,14 @@ const userSchema = new mongoose.Schema(
       default: 0 
     },
 
-    // 🔹 Optional for Redis caching
+    // - Optional for Redis caching
     redisFeedKey: 
     { 
       type: String,
       default: null 
     },
 
-    // 🔹 Miscellaneous
+    // - Miscellaneous
     stories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Story" }],
     themes: { backgroundColor: { type: String, default: "#ffffff" }, accentColor: { type: String, default: "#1DA1F2" } },
   },

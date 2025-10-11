@@ -18,6 +18,7 @@ import uploadVideoCloudinary from "../Utils/uploadVideoCloudinary.js";
 const STORY_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 
 // Upload Story
+// Upload Story
 export const uploadStoryController = async (req, res) => {
   try {
     const userId = req.userId;
@@ -34,7 +35,6 @@ export const uploadStoryController = async (req, res) => {
 
     let mediaBuffer = file.buffer;
     let thumbnailBuffer;
-
     let uploadResult, thumbResult;
 
     // Handle Image
@@ -49,21 +49,17 @@ export const uploadStoryController = async (req, res) => {
         .jpeg({ quality: 50 })
         .toBuffer();
 
-      // Upload image and thumbnail
-      uploadResult = await uploadImageCloudinary({ buffer: mediaBuffer, mimetype });
+      uploadResult = await uploadImageCloudinary({ buffer: mediaBuffer, mimeType });
       thumbResult = await uploadImageCloudinary({ buffer: thumbnailBuffer, mimetype: "image/jpeg" });
     } 
     // Handle Video
     else {
-      // Create temp file paths
       const tempInputPath = path.join(os.tmpdir(), `input-${uuidv4()}.mp4`);
       const tempOutputPath = path.join(os.tmpdir(), `output-${uuidv4()}.mp4`);
       const tempThumbPath = path.join(os.tmpdir(), `thumb-${uuidv4()}.jpg`);
 
-      // Save buffer to temp input file
       fs.writeFileSync(tempInputPath, file.buffer);
 
-      // Compress video
       await new Promise((resolve, reject) => {
         ffmpeg(tempInputPath)
           .outputOptions(["-vcodec libx264", "-crf 28", "-preset fast"])
@@ -72,7 +68,6 @@ export const uploadStoryController = async (req, res) => {
           .on("error", reject);
       });
 
-      // Extract thumbnail
       await new Promise((resolve, reject) => {
         ffmpeg(tempInputPath)
           .screenshots({
@@ -85,33 +80,24 @@ export const uploadStoryController = async (req, res) => {
           .on("error", reject);
       });
 
-      // Read buffers
       mediaBuffer = fs.readFileSync(tempOutputPath);
       thumbnailBuffer = fs.readFileSync(tempThumbPath);
 
-      // Upload video and thumbnail
       uploadResult = await uploadVideoCloudinary(mediaBuffer);
       thumbResult = await uploadImageCloudinary({ buffer: thumbnailBuffer, mimetype: "image/jpeg" });
 
-      // Clean up temp files
       fs.unlinkSync(tempInputPath);
       fs.unlinkSync(tempOutputPath);
       fs.unlinkSync(tempThumbPath);
     }
 
-    if (!uploadResult || !uploadResult.secure_url) {
+    if (!uploadResult?.secure_url || !thumbResult?.secure_url) {
       return res.status(500).json({ success: false, message: "Failed to upload media to Cloudinary" });
     }
 
-    if (!thumbResult || !thumbResult.secure_url) {
-      return res.status(500).json({ success: false, message: "Failed to upload thumbnail to Cloudinary" });
-    }
-
-    // Fetch user info
     const user = await User.findById(userId).select("username avatar");
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // Save story in DB
     const story = await Story.create({
       user: userId,
       mediaUrl: uploadResult.secure_url,
@@ -125,23 +111,31 @@ export const uploadStoryController = async (req, res) => {
       storyKey: uuidv4(),
       user: { _id: user._id, username: user.username, avatar: user.avatar },
       thumbnailUrl: story.thumbnailUrl,
+      mediaUrl: story.mediaUrl,
       caption: story.caption,
       mediaType: story.mediaType,
       createdAt: story.createdAt,
       expiresAt: story.expiresAt,
     };
 
-    // Push to Redis (user + followers)
+    // Push to Redis using ZSET with score = expiresAt timestamp
     const followers = await Follow.find({ following: userId }).select("follower");
     const allFeeds = [userId, ...followers.map(f => f.follower.toString())];
+    const expiresAtMs = new Date(storyMetadata.expiresAt).getTime();
 
     for (const id of allFeeds) {
       const cacheKey = `stories:feed:${id}`;
-      const storyString = JSON.stringify(storyMetadata);
-      await redis.lPush(cacheKey, storyString);
-      await redis.lTrim(cacheKey, 0, 99); // keep latest 100 stories
-      await redis.expire(cacheKey, STORY_EXPIRY_SECONDS);
+      
+      // ensure old wrong type keys are removed
+      const type = await redis.type(cacheKey);
+      if (type !== 'zset') {
+        await redis.del(cacheKey);
+      }
+    
+      const expiresAtMs = new Date(storyMetadata.expiresAt).getTime();
+      await redis.zAdd(cacheKey, { score: expiresAtMs, value: JSON.stringify(storyMetadata) });
     }
+
 
     return res.status(201).json({
       success: true,
@@ -157,26 +151,25 @@ export const uploadStoryController = async (req, res) => {
 
 
 // Get Stories (cached or rebuild from DB)
+// Get Stories
 export const getStoriesController = async (req, res) => {
   try {
     const userId = req.userId;
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const cacheKey = `stories:feed:${userId}`;
+    const now = Date.now();
 
-    // Try fetching from Redis
-    const cachedStories = await redis.lRange(cacheKey, 0, -1);
-    let stories = [];
+    // Remove expired stories
+    await redis.zRemRangeByScore(cacheKey, 0, now);
 
-    if (cachedStories && cachedStories.length > 0) {
-      stories = cachedStories.map((s) => JSON.parse(s));
-    } else {
-      // No cache → rebuild from DB
+    // Fetch only active stories
+    const cachedStories = await redis.zRangeByScore(cacheKey, now, '+inf');
+    let stories = cachedStories.map(s => JSON.parse(s));
+
+    if (stories.length === 0) {
       const following = await Follow.find({ follower: userId }).select("following");
-      const followingIds = following.map((f) => f.following);
+      const followingIds = following.map(f => f.following);
       const userIds = [...followingIds, userId];
 
       const activeStories = await Story.find({
@@ -199,23 +192,19 @@ export const getStoriesController = async (req, res) => {
 
       if (stories.length > 0) {
         const pipeline = redis.multi();
-        stories.forEach((story) => pipeline.rPush(cacheKey, JSON.stringify(story)));
-        pipeline.expire(cacheKey, STORY_EXPIRY_SECONDS);
+        const nowMs = Date.now();
+        for (const story of stories) {
+          const score = new Date(story.expiresAt).getTime();
+          pipeline.zAdd(cacheKey, { score, value: JSON.stringify(story) });
+        }
         await pipeline.exec();
       }
     }
 
-    return res.status(200).json({
-      success: true,
-      count: stories.length,
-      stories,
-    });
+    return res.status(200).json({ success: true, count: stories.length, stories });
+
   } catch (error) {
     console.error("Get stories error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch stories",
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch stories", error: error.message });
   }
 };

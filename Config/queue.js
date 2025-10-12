@@ -10,7 +10,7 @@ const connection = new IORedis({
   port: 6379,
   password: process.env.REDIS_PASSWORD,
   maxRetriesPerRequest: null,
-});
+}); 
 
 // Cloudinary config
 cloudinary.v2.config({

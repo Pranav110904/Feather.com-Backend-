@@ -1,7 +1,5 @@
 import sharp from "sharp";
 import ffmpeg from "fluent-ffmpeg";
-import streamifier from "streamifier";
-
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -12,12 +10,10 @@ import Follow from "../Models/follow.model.js";
 import uploadImageCloudinary from "../Utils/uploadImageToCloudinary.js";
 import redis from "../Config/redis.js";
 import uploadVideoCloudinary from "../Utils/uploadVideoCloudinary.js";
-
-
+import { storyQueue } from "../Config/queue.js"; // BullMQ queue
 
 const STORY_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 
-// Upload Story
 // Upload Story
 export const uploadStoryController = async (req, res) => {
   try {
@@ -98,12 +94,16 @@ export const uploadStoryController = async (req, res) => {
     const user = await User.findById(userId).select("username avatar");
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
+    // Save story in MongoDB
     const story = await Story.create({
       user: userId,
       mediaUrl: uploadResult.secure_url,
       thumbnailUrl: thumbResult.secure_url,
       mediaType: mimeType.startsWith("video") ? "video" : "image",
       caption,
+      // Store Cloudinary public_ids for deletion
+      mediaPublicId: uploadResult.public_id,
+      thumbPublicId: thumbResult.public_id
     });
 
     const storyMetadata = {
@@ -118,24 +118,32 @@ export const uploadStoryController = async (req, res) => {
       expiresAt: story.expiresAt,
     };
 
+    // Schedule BullMQ job for deletion at expiry
+    const delay = new Date(storyMetadata.expiresAt).getTime() - Date.now();
+    await storyQueue.add(
+      "deleteStory",
+      {
+        storyId: story._id,
+        mediaPublicId: uploadResult.public_id,
+        thumbPublicId: thumbResult.public_id,
+        mediaType: mimeType.startsWith("video") ? "video" : "image"
+      },
+      { delay }
+    );
+
+
     // Push to Redis using ZSET with score = expiresAt timestamp
     const followers = await Follow.find({ following: userId }).select("follower");
     const allFeeds = [userId, ...followers.map(f => f.follower.toString())];
-    const expiresAtMs = new Date(storyMetadata.expiresAt).getTime();
 
     for (const id of allFeeds) {
       const cacheKey = `stories:feed:${id}`;
-      
-      // ensure old wrong type keys are removed
       const type = await redis.type(cacheKey);
-      if (type !== 'zset') {
+      if (type !== "zset") {
         await redis.del(cacheKey);
       }
-    
-      const expiresAtMs = new Date(storyMetadata.expiresAt).getTime();
-      await redis.zAdd(cacheKey, { score: expiresAtMs, value: JSON.stringify(storyMetadata) });
+      await redis.zAdd(cacheKey, { score: new Date(storyMetadata.expiresAt).getTime(), value: JSON.stringify(storyMetadata) });
     }
-
 
     return res.status(201).json({
       success: true,
@@ -149,8 +157,6 @@ export const uploadStoryController = async (req, res) => {
   }
 };
 
-
-// Get Stories (cached or rebuild from DB)
 // Get Stories
 export const getStoriesController = async (req, res) => {
   try {
@@ -179,7 +185,7 @@ export const getStoriesController = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate("user", "username avatar");
 
-      stories = activeStories.map((story) => ({
+      stories = activeStories.map(story => ({
         _id: story._id,
         storyKey: uuidv4(),
         user: story.user,
@@ -192,7 +198,6 @@ export const getStoriesController = async (req, res) => {
 
       if (stories.length > 0) {
         const pipeline = redis.multi();
-        const nowMs = Date.now();
         for (const story of stories) {
           const score = new Date(story.expiresAt).getTime();
           pipeline.zAdd(cacheKey, { score, value: JSON.stringify(story) });
@@ -202,7 +207,6 @@ export const getStoriesController = async (req, res) => {
     }
 
     return res.status(200).json({ success: true, count: stories.length, stories });
-
   } catch (error) {
     console.error("Get stories error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch stories", error: error.message });

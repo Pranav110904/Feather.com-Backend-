@@ -46,7 +46,7 @@ app.use(cookieParser());
 // CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true,
   })
 );
@@ -78,13 +78,13 @@ const server = createServer(app);
 // 🧩 Initialize Socket.io with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true,
   },
 });
 
+console.log("💬 Chat socket initialized");
 
-console.log(io);
 // 🧩 Setup Chat Socket
 chatSocket(io);
 

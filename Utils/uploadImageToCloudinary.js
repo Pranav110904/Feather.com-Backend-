@@ -9,7 +9,7 @@ cloudinary.config({
 const uploadImageCloudinary = async (image) => {
 
     const buffer = image?.buffer || Buffer.from(await image.arrayBuffer());
-    
+    if(!buffer) throw new Error("No image buffer provided");
 
     const uploadImage = await new Promise ((resolve, reject) => {
         cloudinary.uploader.upload_stream({folder : 'Feather'}, (error, uploadResult) => {

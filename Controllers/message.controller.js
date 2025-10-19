@@ -1,5 +1,5 @@
-import { Message } from "../Models/message.model.js";
-import { Chat } from "../Models/chat.model.js";
+import  Message  from "../Models/message.model.js";
+import  Chat  from "../Models/chat.model.js";
 import uploadImageCloudinary from "../Utils/uploadImageToCloudinary.js";
 import uploadVideoCloudinary from "../Utils/uploadVideoCloudinary.js";
 import uploadPdfToCloudinary from "../Utils/uploadPdfToCloudinary.js";

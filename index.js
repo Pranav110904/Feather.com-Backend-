@@ -13,10 +13,9 @@ import storyRouter from './Routes/story.route.js';
 
 // 🧩 Added imports for chat system
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { initializeSocket } from './Services/socket.js'; // ✅ updated import
 import chatRoutes from './Routes/chat.routes.js';
 import messageRoutes from './Routes/message.routes.js';
-import { chatSocket } from './Services/chatSocketService.js';
 
 dotenv.config();
 
@@ -70,23 +69,16 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 
 // === DATABASE & SERVER ===
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8080
 
 // Create HTTP server for Socket.io
 const server = createServer(app);
 
-// 🧩 Initialize Socket.io with CORS
-const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-  },
-});
+// 🧩 Initialize Socket.io with proper setup
+const io = initializeSocket(server); // ✅ uses your new function that returns io
+app.set('io', io); // ✅ allows controllers to emit events using req.app.get("io")
 
-console.log("💬 Chat socket initialized");
-
-// 🧩 Setup Chat Socket
-chatSocket(io);
+console.log('💬 Chat socket initialized');
 
 // Connect DB and start server
 connectDB()

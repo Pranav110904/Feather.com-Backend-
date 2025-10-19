@@ -1,14 +1,13 @@
-import Chat  from "../Models/chat.model.js";
-import Message  from "../Models/message.model.js";
+import   Chat  from "../Models/chat.model.js";
+import Message   from "../Models/message.model.js";
 import User from "../Models/user.model.js";
 import Follow from "../Models/follow.model.js";
 import uploadImageCloudinary from "../Utils/uploadImageToCloudinary.js";
 import {
     deletFilesFromCloudinary,
     emitEvent,
-    uploadFilesToCloudinary,
 } from "../Utils/feature.js";
-import { ErrorHandler } from "../utils/utility.js";
+
 
 // Utility: check mutual followers
 const areMutualFollowers = async (userA, userB) => {

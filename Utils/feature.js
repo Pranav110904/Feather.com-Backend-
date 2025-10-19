@@ -1,50 +1,29 @@
-import { v2 as cloudinary } from "cloudinary";
+// Utils/feature.js
+import cloudinary from "cloudinary";
 
-// ✅ Cloudinary Configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET_KEY,
-});
-
-/**
- * 🧹 Delete files from Cloudinary by public IDs
- * @param {Array<string>} publicIds
- */
-export const deletFilesFromCloudinary = async (publicIds = []) => {
+// ✅ Delete files from Cloudinary
+export const deletFilesFromCloudinary = async (public_ids = []) => {
   try {
-    if (!publicIds.length) return;
-
-    await Promise.all(
-      publicIds.map(async (id) => {
-        await cloudinary.uploader.destroy(id, { resource_type: "auto" });
-      })
+    if (!public_ids.length) return;
+    const deletePromises = public_ids.map(id =>
+      cloudinary.v2.uploader.destroy(id)
     );
-
-    console.log("✅ Files deleted successfully from Cloudinary");
+    await Promise.all(deletePromises);
+    console.log("🗑️ Deleted files from Cloudinary:", public_ids);
   } catch (error) {
-    console.error("❌ Error deleting files from Cloudinary:", error);
+    console.error("Error deleting files from Cloudinary:", error);
   }
 };
 
-/**
- * 🔔 Emit socket event safely
- * @param {object} req - Express request object (with io in app.locals)
- * @param {string} event - Event name to emit
- * @param {string} roomId - Room or chat ID
- * @param {object} payload - Data to send with event
- */
-export const emitEvent = (req, event, roomId, payload) => {
+// ✅ Emit socket event to multiple users
+export const emitEvent = (req, event, users = [], data) => {
   try {
-    const io = req.app.get("io");
-    if (!io) {
-      console.error("❌ Socket.io instance not found in app.locals");
-      return;
-    }
-
-    io.to(roomId).emit(event, payload);
-    console.log(`📢 Event '${event}' emitted to room '${roomId}'`);
+    const io = req.app.get("io"); // get the socket instance from Express
+    if (!io) return console.warn("⚠️ Socket.IO not initialized yet");
+    users.forEach(userId => {
+      io.to(userId.toString()).emit(event, data);
+    });
   } catch (error) {
-    console.error("❌ Error emitting socket event:", error);
+    console.error("Error emitting socket event:", error);
   }
 };

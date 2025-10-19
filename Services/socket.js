@@ -1,6 +1,7 @@
 // socket/socket.js
 import { Server } from "socket.io";
-
+import Message from "../Models/message.model.js";
+import Chat from "../Models/chat.model.js";
 export const initializeSocket = (server) => {
   const io = new Server(server, {
     cors: {
@@ -10,22 +11,32 @@ export const initializeSocket = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("🟢 User connected:", socket.id);
-
-    // 🧩 Each user joins their own room (by userId)
-    socket.on("join_user", (userId) => {
-      socket.join(userId);
-      console.log(`User ${userId} joined personal room`);
-    });
-
-    // 🧩 User joins a chat room (for direct or group chats)
+    console.log("New client connected:", socket.id);
+  
     socket.on("join_chat", (chatId) => {
       socket.join(chatId);
       console.log(`Socket ${socket.id} joined chat ${chatId}`);
     });
-
-    socket.on("disconnect", () => {
-      console.log("🔴 User disconnected:", socket.id);
+  
+    socket.on("send_message", async (data) => {
+      const { chatId, senderId, content, attachments } = data;
+  
+      try {
+        const newMessage = await Message.create({
+          sender: senderId,      // Must be valid ObjectId
+          chat: chatId,          // Must be valid chat ObjectId
+          content,
+          attachments: attachments || [],
+        });
+  
+        await Chat.findByIdAndUpdate(chatId, { updatedAt: Date.now() });
+  
+        const fullMessage = await newMessage.populate("sender", "name username avatar");
+  
+        io.to(chatId).emit("receive_message", fullMessage);
+      } catch (err) {
+        console.error("Socket error:", err);
+      }
     });
   });
 

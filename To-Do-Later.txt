@@ -1,0 +1,2 @@
+1.Building Chat will be done once the frontend is created because with backend its getting very difficult do check the proper functionality.
+2.

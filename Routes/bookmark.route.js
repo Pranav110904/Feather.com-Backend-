@@ -1,5 +1,6 @@
 import Router from "express";
-import { bookmarkTweet,removeBookmark } from "../Controllers/bookmarks.controller";
+
+import { removeBookmark } from "../Controllers/bookmarks.controller";
 
 
 const routerBookmark=Router();

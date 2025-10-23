@@ -1,6 +1,8 @@
-import Router from "express";
+import { Router } from "express";
 
-import { removeBookmark } from "../Controllers/bookmarks.controller";
+import { bookmarkTweet } from "../Controllers/bookmarks.controller.js";
+import { removeBookmark } from "../Controllers/bookmarks.controller.js";
+
 
 
 const routerBookmark=Router();

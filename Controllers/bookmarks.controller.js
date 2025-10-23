@@ -1,4 +1,5 @@
-import User from "../models/User.js";
+
+import User from "../Models/user.model.js";
 
 export const bookmarkTweet = async (req, res) => {
   const userId = req.userId;

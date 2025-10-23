@@ -137,6 +137,10 @@ const userSchema = new mongoose.Schema(
     // - Miscellaneous
     stories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Story" }],
     themes: { backgroundColor: { type: String, default: "#ffffff" }, accentColor: { type: String, default: "#1DA1F2" } },
+    
+    bookmarks: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "Tweet" }
+    ]
   },
   { timestamps: true }
 );

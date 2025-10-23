@@ -23,8 +23,7 @@ export const initializeSocket = (server) => {
   
       try {
         const newMessage = await Message.create({
-          sender: senderId,      // Must be valid ObjectId
-          chat: chatId,          // Must be valid chat ObjectId
+          sender: senderId,     
           content,
           attachments: attachments || [],
         });

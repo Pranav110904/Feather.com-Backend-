@@ -10,12 +10,13 @@ import feedRoutes from './Routes/feed.route.js';
 import followRouter from './Routes/follow.route.js';
 import aiTweetRouter from './Routes/aiTweets.route.js';
 import storyRouter from './Routes/story.route.js';
+import chatRoutes from './Routes/chat.routes.js';
+import messageRoutes from './Routes/message.routes.js';
+import bookmarkRoutes from './Routes/bookmark.route.js';
 
 // 🧩 Added imports for chat system
 import { createServer } from 'http';
 import { initializeSocket } from './Services/socket.js'; // ✅ updated import
-import chatRoutes from './Routes/chat.routes.js';
-import messageRoutes from './Routes/message.routes.js';
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ app.use('/api', feedRoutes);
 app.use('/api', followRouter);
 app.use('/api/ai', aiTweetRouter);
 app.use('/api/story', storyRouter);
+app.use('/api/bookmark', bookmarkRouter);
 
 // 🧩 Added Chat & Message routes
 app.use('/api/chats', chatRoutes);

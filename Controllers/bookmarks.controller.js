@@ -1,7 +1,7 @@
 import User from "../models/User.js";
 
 export const bookmarkTweet = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.userId;
   const tweetId = req.params.id;
 
   try {
@@ -18,7 +18,7 @@ export const bookmarkTweet = async (req, res) => {
 
 // Remove bookmark
 export const removeBookmark = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.userId;
   const tweetId = req.params.id;
 
   try {

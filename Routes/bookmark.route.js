@@ -6,7 +6,8 @@ const routerBookmark=Router();
 
 
 
-routerBookmark.post("/:id", bookmarkTweet);
+routerBookmark.post("/:id/bookmark", bookmarkTweet);
+routerBookmark.delete("/:id/bookmark", removeBookmark);
 
 
 export default routerBookmark;

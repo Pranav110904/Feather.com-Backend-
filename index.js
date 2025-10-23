@@ -12,7 +12,7 @@ import aiTweetRouter from './Routes/aiTweets.route.js';
 import storyRouter from './Routes/story.route.js';
 import chatRoutes from './Routes/chat.routes.js';
 import messageRoutes from './Routes/message.routes.js';
-import bookmarkRoutes from './Routes/bookmark.route.js';
+import routerBookmark from './Routes/bookmark.route.js';
 
 // 🧩 Added imports for chat system
 import { createServer } from 'http';
@@ -64,7 +64,7 @@ app.use('/api', feedRoutes);
 app.use('/api', followRouter);
 app.use('/api/ai', aiTweetRouter);
 app.use('/api/story', storyRouter);
-app.use('/api/bookmark', bookmarkRouter);
+app.use('/api/bookmark', routerBookmark);
 
 // 🧩 Added Chat & Message routes
 app.use('/api/chats', chatRoutes);

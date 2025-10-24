@@ -10,8 +10,8 @@ const routerBookmark=Router();
 
 
 
-routerBookmark.post("/:id/bookmark", auth, bookmarkTweet);
-routerBookmark.delete("/:id/bookmark", auth, removeBookmark);
+routerBookmark.post("/:id", auth, bookmarkTweet);
+routerBookmark.delete("/:id", auth, removeBookmark);
 routerBookmark.get("/bookmarks", auth, getBookmarks);
 
 

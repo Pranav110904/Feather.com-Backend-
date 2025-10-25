@@ -5,7 +5,7 @@ import { extractHashtags }  from "../Utils/extractHashtags.js";
 import { classifyCategory }  from "../Utils/classifyCategory.js";
 import { updateTrendingHashtags }  from "../Services/exploreService.js"; // trending logic from earlier
 import TrendingBackup from "../Models/trendingBackup.model.js"; // Mongo backup model
-
+import { mlCategoryPredict } from "../Utils/mlCategoryPredict.js";
 export const createTweet = async (req, res) => {
   try {
     const authorId = req.userId;
@@ -37,8 +37,13 @@ export const createTweet = async (req, res) => {
 
     // 4️⃣ Hashtag + category tracking for Explore section
     const hashtags = extractHashtags(content);
+    
     if (hashtags.length > 0) {
       const category = classifyCategory(content);
+      
+      console.log(hashtags);
+    const categoryPrediction = await mlCategoryPredict({ content, hashtags });
+    console.log(categoryPrediction);
 
       try {
         // update in Redis (main trending engine)

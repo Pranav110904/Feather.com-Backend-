@@ -14,6 +14,7 @@ import chatRoutes from './Routes/chat.routes.js';
 import messageRoutes from './Routes/message.routes.js';
 import routerBookmark from './Routes/bookmark.route.js';
 import exploreRoutes from './Routes/explore.route.js';
+import suggestionRouter from './Routes/suggestion.route.js';
 
 // 🧩 Added imports for chat system
 import { createServer } from 'http';
@@ -71,6 +72,7 @@ app.use('/api/bookmark', routerBookmark);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/explore', exploreRoutes);
+app.use('/api/suggestions', suggestionRouter);
 
 // === DATABASE & SERVER ===
 const PORT = process.env.PORT || 8080

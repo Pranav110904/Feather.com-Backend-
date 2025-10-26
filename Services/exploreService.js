@@ -18,7 +18,7 @@ export async function updateTrendingHashtags(hashtags, mainCategory, subcategory
 }
 
 // Query top hashtags by global, main category, or subcategory
-export async function getTrendingHashtags(type = "global", value = null, limit = 10) {
+export async function getTrendingHashtags(type , value, limit = 10) {
   let key;
   if (type === "global" || !value) {
     key = `trending:global`;

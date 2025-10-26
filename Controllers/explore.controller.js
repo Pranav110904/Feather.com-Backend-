@@ -46,8 +46,10 @@ export const getExploreData = async (req, res) => {
 export const getSubCategoryTrends = async (req, res) => {
   try {
     const { sub } = req.query;
+    
     if (!sub) return res.status(400).json({ success: false, error: "Subcategory required" });
     const subTrends = await getTrendingHashtags("sub", sub, 10);
+    console.log(subTrends);
     res.json({ success: true, subTrends });
   } catch (error) {
     res.status(500).json({ success: false, error: "Failed to fetch subcategory trends" });

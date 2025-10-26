@@ -8,8 +8,8 @@ const exploreRouter = Router();
 // exploreRouter.get("/hashtag/:tag",auth, getHashtagTweets);
 
 exploreRouter.get("/", getExploreData);
-exploreRouter.get("/explore/subcategory", getSubCategoryTrends); // ?sub=sports
-exploreRouter.get("/explore/hashtag/:tag", getHashtagTweets);
+exploreRouter.get("/subcategory", getSubCategoryTrends); // ?sub=sports
+exploreRouter.get("/hashtag/:tag", getHashtagTweets);
 
 
 export default exploreRouter;

@@ -4,12 +4,9 @@ import auth from "../Middleware/auth.js";
 
 const exploreRouter = Router();
 
-// exploreRouter.get("/",auth, getExploreData);
-// exploreRouter.get("/hashtag/:tag",auth, getHashtagTweets);
-
-exploreRouter.get("/", getExploreData);
-exploreRouter.get("/subcategory", getSubCategoryTrends); // ?sub=sports
-exploreRouter.get("/hashtag/:tag", getHashtagTweets);
+exploreRouter.get("/",auth, getExploreData);
+exploreRouter.get("/subcategory",auth, getSubCategoryTrends);
+exploreRouter.get("/hashtag/:tag",auth, getHashtagTweets);
 
 
 export default exploreRouter;

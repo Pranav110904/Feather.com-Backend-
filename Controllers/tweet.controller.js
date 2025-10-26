@@ -1,11 +1,12 @@
 import Tweet from "../Models/tweet.model.js";
 import Follow from "../Models/follow.model.js";
 import redis from "../Config/redis.js";
-import { extractHashtags }  from "../Utils/extractHashtags.js";
-import { classifyCategory }  from "../Utils/classifyCategory.js";
-import { updateTrendingHashtags }  from "../Services/exploreService.js"; // trending logic from earlier
-import TrendingBackup from "../Models/trendingBackup.model.js"; // Mongo backup model
+import { extractHashtags } from "../Utils/extractHashtags.js";
+import { updateTrendingHashtags } from "../Services/exploreService.js";
+import TrendingBackup from "../Models/trendingBackup.model.js";
 import { mlCategoryPredict } from "../Utils/mlCategoryPredict.js";
+import { SUBCATEGORY_TO_MAIN, DEFAULT_MAIN_CATEGORY } from "../Utils/subcategoryMapping.js";
+
 export const createTweet = async (req, res) => {
   try {
     const authorId = req.userId;
@@ -35,24 +36,23 @@ export const createTweet = async (req, res) => {
 
     await pipeline.exec();
 
-    // 4️⃣ Hashtag + category tracking for Explore section
+    // 4️⃣ Hashtag + ML-based category tracking for Explore/trending section
     const hashtags = extractHashtags(content);
-    
+
     if (hashtags.length > 0) {
-      const category = classifyCategory(content);
-      
-      console.log(hashtags);
-    const categoryPrediction = await mlCategoryPredict({ content, hashtags });
-    console.log(categoryPrediction);
+      // Use ML to get subcategory/category
+      const categoryPrediction = await mlCategoryPredict({ text: content, hashtags }); // <-- note correct property name 'text'
+      const subcategory = categoryPrediction.category;
+      const mainCategory = SUBCATEGORY_TO_MAIN[subcategory] || DEFAULT_MAIN_CATEGORY;
 
       try {
-        // update in Redis (main trending engine)
-        await updateTrendingHashtags(hashtags, category);
+        // Update in Redis for trending
+        await updateTrendingHashtags(hashtags, mainCategory, subcategory);
       } catch (redisError) {
+        // Fallback—store in MongoDB backup
         console.error("⚠️ Redis down, saving backup to MongoDB:", redisError.message);
-        // Fallback — store hashtag + category in MongoDB backup collection
         for (const tag of hashtags) {
-          await TrendingBackup.create({ hashtag: tag, category });
+          await TrendingBackup.create({ hashtag: tag, mainCategory, subcategory });
         }
       }
     }

@@ -1,17 +1,25 @@
 import { getTrendingHashtags, getTopTrend } from "../Services/exploreService.js";
 import Tweet from "../Models/tweet.model.js";
 
+// Get top and trending hashtags by main category and subcategory
 export const getExploreData = async (req, res) => {
   try {
-    const [topTrend, globalTrends, newsTrends, sportsTrends, entertainmentTrends] = await Promise.all([
-      getTopTrend(),
-      getTrendingHashtags("global", 10),
-      getTrendingHashtags("news", 10),
-      getTrendingHashtags("sports", 10),
-      getTrendingHashtags("entertainment", 10),
+    // Query global trends, and by main categories
+    const [
+      topGlobalTrend,
+      globalTrends,
+      newsTrends,
+      sportsTrends,
+      entertainmentTrends
+    ] = await Promise.all([
+      getTopTrend("global"),
+      getTrendingHashtags("global", null, 10),
+      getTrendingHashtags("main", "news", 10),
+      getTrendingHashtags("main", "sports", 10),
+      getTrendingHashtags("main", "entertainment", 10)
     ]);
 
-    // “For You” could be a mix of all categories (simplified for now)
+    // “For You”: random mix
     const forYou = [...newsTrends, ...sportsTrends, ...entertainmentTrends]
       .sort(() => Math.random() - 0.5)
       .slice(0, 10);
@@ -19,12 +27,12 @@ export const getExploreData = async (req, res) => {
     res.json({
       success: true,
       data: {
-        topTrend,
+        topGlobalTrend,
         globalTrends,
         newsTrends,
         sportsTrends,
         entertainmentTrends,
-        forYou,
+        forYou
       },
     });
   } catch (error) {
@@ -33,7 +41,20 @@ export const getExploreData = async (req, res) => {
   }
 };
 
-// existing route for hashtag-specific tweets
+// Get trending for a subcategory (optional, useful for UI subfilters)
+// /explore/subcategory?sub=sports or &sub=film_tv_&_video
+export const getSubCategoryTrends = async (req, res) => {
+  try {
+    const { sub } = req.query;
+    if (!sub) return res.status(400).json({ success: false, error: "Subcategory required" });
+    const subTrends = await getTrendingHashtags("sub", sub, 10);
+    res.json({ success: true, subTrends });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to fetch subcategory trends" });
+  }
+};
+
+// Get Tweets for a trending hashtag (works for all categories)
 export const getHashtagTweets = async (req, res) => {
   try {
     const { tag } = req.params;
